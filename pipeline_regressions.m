@@ -43,7 +43,7 @@ transformations = {'not transformed'; 'Fisher transformed'};
 number_of_sources = 32; 
 
 % Number of principal components calculated on correlations
-number_of_PCs = 100;
+number_of_PCs = number_of_sources * (number_of_sources - 1)/2; % The maximum number.
 
 % Lower triangle-only for correlations.
 indices = find(tril(ones(number_of_sources), -1));
