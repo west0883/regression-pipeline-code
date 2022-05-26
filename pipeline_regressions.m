@@ -30,12 +30,19 @@ parameters.mice_all = parameters.mice_all(1);
 periods_spontaneous = {'rest';'walk';'startwalk';'prewalk';'stopwalk';'postwalk';'full_onset';'full_offset'};
 
 load([parameters.dir_exper 'periods_nametable.mat']);
-periods_motorized = periods;
+periods_motorized = periods.condition;
 
+% Create a shared motorized & spontaneous list.
+periods_bothConditions = [periods.condition; periods_spontaneous]; 
+
+% Make list of transformation types for iterating later.
+transformations = {'not transformed'; 'Fisher transformed'};
+
+number_of_sources = 32; 
 %% Spontaneous-- Look at histograms of response variable by itself 
 % (each correlation, not dependent on velocity yet) Is important for
 % picking the style of GLM.
-number_of_sources = 29; 
+
 indices = find(tril(ones(number_of_sources), -1));
 
 period = 'walk';
@@ -80,10 +87,11 @@ distributions = NaN(size(correlations_reshaped,2), 36); % 36 is the  default num
 a = a(places);
 
 %% Regress all spontaneous
-number_of_sources = 29; 
+
 indices = find(tril(ones(number_of_sources), -1));
 
 period = 'walk';
+period_index = '190';
 
 % Always clear loop list first. 
 if isfield(parameters, 'loop_list')
@@ -91,11 +99,14 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+parameters.loop_list.iterators = {
+              'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+              'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'index', {'loop_variables.indices'}, 'index_iterator'};
 
 parameters.loop_variables.mice_all = parameters.mice_all;
 parameters.loop_variables.indices = indices;
+parameters.loop_variables.transformations = transformations;
 
 % Dimension of different predictors (so you can orient variables correctly
 % before regressing)
@@ -103,8 +114,8 @@ parameters.predictorsDim = 1;
 
 % Input 
 % Correlations as response/ dependent variable.
-parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\spontaneous\'] 'mouse', '\instances reshaped\'};
-parameters.loop_list.things_to_load.response.filename= {'correlations_', period, '.mat'};
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\', 'mouse', '\instances reshaped\'};
+parameters.loop_list.things_to_load.response.filename= {'correlations_', period, ['_' period_index '.mat']};
 parameters.loop_list.things_to_load.response.variable= {'correlations_reshaped(', 'index', ', :)'}; 
 parameters.loop_list.things_to_load.response.level = 'mouse';
 
@@ -115,12 +126,12 @@ parameters.loop_list.things_to_load.explanatory.variable= {'average_velocity'};
 parameters.loop_list.things_to_load.explanatory.level = 'mouse';
 
 % Output
-parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\spontaneous\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\spontaneous\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_r2.filename= {'regression_results_r2s.mat'};
 parameters.loop_list.things_to_save.results_r2.variable= {'r2s(', 'index_iterator', ', 1)'}; 
 parameters.loop_list.things_to_save.results_r2.level = 'mouse';
 
-parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\spontaneous\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\spontaneous\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_betas.filename= {'regression_results_betas.mat'};
 parameters.loop_list.things_to_save.results_betas.variable= {'betas(', 'index_iterator', ', :)'}; 
 parameters.loop_list.things_to_save.results_betas.level = 'mouse';
@@ -138,7 +149,9 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+parameters.loop_list.iterators = {
+               'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+               'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'period', {'loop_variables.periods(:)'}, 'period_iterator'};
 parameters.loop_variables.mice_all = parameters.mice_all;
 parameters.loop_variables.periods = periods;
@@ -155,13 +168,13 @@ parameters.period_velocities = period_velocities;
 parameters.concatDim = 1;
 
 % Inputs (reshaped correlations, for the number)
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\instances reshaped\'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\', 'mouse', '\instances reshaped\'};
 parameters.loop_list.things_to_load.data.filename= {['correlations_' condition '_'], 'period', '.mat'};
 parameters.loop_list.things_to_load.data.variable= {'correlations_reshaped'}; 
 parameters.loop_list.things_to_load.data.level = 'period';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized\velocity vectors\'], 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\velocity vectors\motorized\'], 'mouse','\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'velocity_vector.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'velocity_vector'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -181,22 +194,25 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+parameters.loop_list.iterators = {
+               'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+               'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'period', {'loop_variables.periods(:)'}, 'period_iterator'};
 parameters.loop_variables.mice_all = parameters.mice_all;
 parameters.loop_variables.periods = periods;
+parameters.loop_variables.transformations = transformations;
 
 % Concatenation dimension
 parameters.concatDim = 2;
 
 % Inputs (reshaped correlations)
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\instances reshaped\'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\' 'mouse', '\instances reshaped\'};
 parameters.loop_list.things_to_load.data.filename= {['correlations_' condition '_'], 'period', '.mat'};
 parameters.loop_list.things_to_load.data.variable= {'correlations_reshaped'}; 
 parameters.loop_list.things_to_load.data.level = 'period';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\all concatenated\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\', 'mouse', '\all concatenated\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'correlations_all_c_walk.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'correlations'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -205,7 +221,6 @@ RunAnalysis({@ConcatenateData}, parameters);
 
 %% Motorized -- regress
 
-number_of_sources = 29; 
 indices = find(tril(ones(number_of_sources), -1));
 
 condition = 'c_walk';
@@ -216,7 +231,9 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+parameters.loop_list.iterators = {
+              'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+              'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'index', {'loop_variables.indices'}, 'index_iterator'};
 
 parameters.loop_variables.mice_all = parameters.mice_all;
@@ -228,24 +245,24 @@ parameters.predictorsDim = 2;
 
 % Input 
 % Correlations as response/ dependent variable.
-parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\all concatenated\'};
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\', 'mouse', '\all concatenated\'};
 parameters.loop_list.things_to_load.response.filename= {'correlations_all_c_walk.mat'};
 parameters.loop_list.things_to_load.response.variable= {'correlations(', 'index', ',:)'}; 
 parameters.loop_list.things_to_load.response.level = 'mouse';
 
 % Velocities as explanatory/independent variable.
-parameters.loop_list.things_to_load.explanatory.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized\velocity vectors\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.explanatory.dir = {[parameters.dir_exper 'regression analysis\walk velocity\velocity vectors\motorized\'], 'mouse', '\'};
 parameters.loop_list.things_to_load.explanatory.filename= {'velocity_vector.mat'};
 parameters.loop_list.things_to_load.explanatory.variable= {'velocity_vector'}; 
 parameters.loop_list.things_to_load.explanatory.level = 'mouse';
 
 % Output
-parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\motorized\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_r2.filename= {'regression_results_r2s.mat'};
 parameters.loop_list.things_to_save.results_r2.variable= {'r2s(', 'index_iterator', ', 1)'}; 
 parameters.loop_list.things_to_save.results_r2.level = 'mouse';
 
-parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\motorized\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_betas.filename= {'regression_results_betas.mat'};
 parameters.loop_list.things_to_save.results_betas.variable= {'betas(', 'index_iterator', ', :)'}; 
 parameters.loop_list.things_to_save.results_betas.level = 'mouse';
@@ -254,7 +271,6 @@ RunAnalysis({@RegressData}, parameters);
 
 %% Reshape regression results 
 % (you end up using them all in reshaped form later anyway)
-number_of_sources = 29; 
 indices = find(tril(ones(number_of_sources), -1));
 
 parameters.loop_variables.conditions = {'motorized'; 'spontaneous'};
@@ -267,19 +283,20 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterators
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
+parameters.loop_list.iterators = { 'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+                                  'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
                                   'condition', {'loop_variables.conditions(:)'}, 'condition_iterator';
                                   'result_type', {'loop_variables.result_types(:)'}, 'result_type_iterator'};
 parameters.pixels = [number_of_sources, number_of_sources];
 parameters.indices_of_mask = indices;
 parameters.pixelDim = 2; 
 
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'condition', '\results\', 'mouse', '\'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'],'transformation', '\', 'condition', '\results\', 'mouse', '\'};
 parameters.loop_list.things_to_load.data.filename= {'regression_results_', 'result_type', '.mat'};
 parameters.loop_list.things_to_load.data.variable= {'result_type'}; 
 parameters.loop_list.things_to_load.data.level = 'result_type';
 
-parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'condition', '\results\', 'mouse', '\'};
+parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\', 'condition', '\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.data_matrix_filled.filename= {'regression_results_reshaped_', 'result_type', '.mat'};
 parameters.loop_list.things_to_save.data_matrix_filled.variable= {'result_type'}; 
 parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
@@ -287,8 +304,7 @@ parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
 RunAnalysis({@FillMasks_forRunAnalysis}, parameters);
 
 %% Compare differences in betas between conditions
-% Load, subtract, save
-number_of_sources = 29; 
+% Load, subtract, save 
 indices = find(tril(ones(number_of_sources), -1));
 
 parameters.loop_variables.conditions = {'motorized'; 'spontaneous'};
@@ -300,19 +316,21 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterators
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'};
+parameters.loop_list.iterators = {
+                    'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+                    'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'};
                                   
 parameters.pixels = [number_of_sources, number_of_sources];
 parameters.indices_of_mask = indices;
 
 % Motorized
-parameters.loop_list.things_to_load.subtract_this.dir = {[parameters.dir_exper '\regression analysis\walk velocity\spontaneous\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.subtract_this.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'],'transformation', '\spontaneous\results\', 'mouse', '\'};
 parameters.loop_list.things_to_load.subtract_this.filename= {'regression_results_reshaped_betas.mat'};
 parameters.loop_list.things_to_load.subtract_this.variable= {'betas'}; 
 parameters.loop_list.things_to_load.subtract_this.level = 'mouse';
 
 % Spontaneous 
-parameters.loop_list.things_to_load.subtract_from_this.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.subtract_from_this.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'transformation', '\motorized\results\', 'mouse', '\'};
 parameters.loop_list.things_to_load.subtract_from_this.filename= {'regression_results_reshaped_betas.mat'};
 parameters.loop_list.things_to_load.subtract_from_this.variable= {'betas'}; 
 parameters.loop_list.things_to_load.subtract_from_this.level = 'mouse';
@@ -344,13 +362,13 @@ parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 
 parameters.concatDim = 1; 
 
 % Input
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'condition', '\velocity vectors\', 'mouse','\'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], '\velocity vectors\', 'condition', '\', 'mouse','\'};
 parameters.loop_list.things_to_load.data.filename= {'velocity_vector.mat'};
 parameters.loop_list.things_to_load.data.variable= {'velocity_vector'}; 
 parameters.loop_list.things_to_load.data.level = 'condition';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\velocity vectors\'], 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\velocity vectors\motorized & spontaneous together\'], 'mouse','\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'velocity_vector.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'velocity_vector'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -369,25 +387,25 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 parameters.loop_variables.mice_all = parameters.mice_all;
+parameters.loop_variables.periods = {'c_walk_176'; 'c_walk_177'; 'c_walk_178'; 'c_walk_179'; 'walk_190'};
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'}; 
+parameters.loop_list.iterators = {
+    'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+    'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
+    'period', {'loop_variables.periods'}, 'period_iterator';
+     };
 
 parameters.concatDim = 2; 
 
 % Input
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\spontaneous\'] 'mouse', '\instances reshaped\'};
-parameters.loop_list.things_to_load.data.filename= {'correlations_walk.mat'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\'], 'transformation', '\', 'mouse', '\instances reshaped\'};
+parameters.loop_list.things_to_load.data.filename= {'correlations_', 'period', '.mat'};
 parameters.loop_list.things_to_load.data.variable= {'correlations_reshaped'}; 
-parameters.loop_list.things_to_load.data.level = 'mouse';
-
-parameters.loop_list.things_to_load.concatenated_data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\all concatenated\'};
-parameters.loop_list.things_to_load.concatenated_data.filename= {'correlations_all_c_walk.mat'};
-parameters.loop_list.things_to_load.concatenated_data.variable= {'correlations'}; 
-parameters.loop_list.things_to_load.concatenated_data.level = 'mouse';
+parameters.loop_list.things_to_load.data.level = 'period';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\correlations together\'], 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'transformation', '\', 'motorized & spontaneous together\correlations together\', 'mouse','\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'correlations.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'all_correlations'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -396,7 +414,6 @@ RunAnalysis({@ConcatenateData}, parameters);
 
 %% Regress spontaneous & motorized together.
 
-number_of_sources = 29; 
 indices = find(tril(ones(number_of_sources), -1));
 
 % Always clear loop list first. 
@@ -405,7 +422,9 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterations.
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+parameters.loop_list.iterators = {
+              'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+              'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'index', {'loop_variables.indices'}, 'index_iterator'};
 
 parameters.loop_variables.mice_all = parameters.mice_all;
@@ -417,24 +436,24 @@ parameters.predictorsDim = 2;
 
 % Input 
 % (correlations as response/dependent variable)
-parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\correlations together\'], 'mouse','\'};
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'transformation', '\motorized & spontaneous together\correlations together\', 'mouse','\'};
 parameters.loop_list.things_to_load.response.filename= {'correlations.mat'};
 parameters.loop_list.things_to_load.response.variable= {'all_correlations(', 'index', ',:)'}; 
 parameters.loop_list.things_to_load.response.level = 'mouse';
 
 % (Velocities as explanatory/independent variable.)
-parameters.loop_list.things_to_load.explanatory.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\velocity vectors\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.explanatory.dir = {[parameters.dir_exper 'regression analysis\walk velocity\velocity vectors\motorized & spontaneous together\'], 'mouse', '\'};
 parameters.loop_list.things_to_load.explanatory.filename= {'velocity_vector.mat'};
 parameters.loop_list.things_to_load.explanatory.variable= {'velocity_vector'}; 
 parameters.loop_list.things_to_load.explanatory.level = 'mouse';
 
 % Output
-parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\motorized & spontaneous together\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_r2.filename= {'regression_results_r2s.mat'};
 parameters.loop_list.things_to_save.results_r2.variable= {'r2s(', 'index_iterator', ', 1)'}; 
 parameters.loop_list.things_to_save.results_r2.level = 'mouse';
 
-parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'transformation', '\motorized & spontaneous together\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.results_betas.filename= {'regression_results_betas.mat'};
 parameters.loop_list.things_to_save.results_betas.variable= {'betas(', 'index_iterator', ', :)'}; 
 parameters.loop_list.things_to_save.results_betas.level = 'mouse';
@@ -442,7 +461,7 @@ parameters.loop_list.things_to_save.results_betas.level = 'mouse';
 RunAnalysis({@RegressData}, parameters);
 
 %% Reshape motorized & spontaneous regression results 
-number_of_sources = 29; 
+
 indices = find(tril(ones(number_of_sources), -1));
 
 parameters.loop_variables.result_types = {'betas'; 'r2s'};
@@ -454,18 +473,19 @@ parameters = rmfield(parameters,'loop_list');
 end
 
 % Iterators
-parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
+parameters.loop_list.iterators = {'transformation', {'loop_variables.transformations'}, 'transformation_iterator';
+                                  'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
                                   'result_type', {'loop_variables.result_types(:)'}, 'result_type_iterator'};
 parameters.pixels = [number_of_sources, number_of_sources];
 parameters.indices_of_mask = indices;
 parameters.pixelDim = 2; 
 
-parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'transformation', '\motorized & spontaneous together\results\', 'mouse', '\'};
 parameters.loop_list.things_to_load.data.filename= {'regression_results_', 'result_type', '.mat'};
 parameters.loop_list.things_to_load.data.variable= {'result_type'}; 
 parameters.loop_list.things_to_load.data.level = 'result_type';
 
-parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'transformation', '\motorized & spontaneous together\results\', 'mouse', '\'};
 parameters.loop_list.things_to_save.data_matrix_filled.filename= {'regression_results_reshaped_', 'result_type', '.mat'};
 parameters.loop_list.things_to_save.data_matrix_filled.variable= {'result_type'}; 
 parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
@@ -476,73 +496,77 @@ RunAnalysis({@FillMasks_forRunAnalysis}, parameters);
 cmap_diffs = flipud(cbrewer('div', 'RdBu', 256, 'nearest'));
 mouse = '1087'; 
 
-figure; 
+for i = 1:numel(transformations)
+    transformation = transformations{i};
+    figure; 
+    
+    % plot spontaneous;
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\spontaneous\results\1087\regression_results_reshaped_betas.mat']); 
+    subplot(3, 3, 1); imagesc(betas(:,:,1)); axis square;
+    title('b1 spontaneous'); colorbar; colormap(gca, cmap_diffs);
+    caxis([-0.1 0.1]);
+    
+    subplot(3, 3, 2); imagesc(betas(:,:,2)); axis square;
+    title('b0 spontaneous'); colorbar;
+    caxis([0 2]);
+    
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\spontaneous\results\1087\regression_results_reshaped_r2s.mat']); 
+    subplot(3, 3,3); imagesc(r2s); axis square;
+    title('r2s spontaneous'); colorbar; 
+    caxis([0 0.05]);
+    
+    % plot motorized
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\motorized\results\1087\regression_results_reshaped_betas.mat']); 
+    subplot(3, 3,4); imagesc(betas(:,:,1)); axis square;
+    title('b1 motorized'); colorbar; colormap(gca, cmap_diffs);
+    caxis([-0.1 0.1]);
+    
+    subplot(3, 3, 5); imagesc(betas(:,:,2)); axis square;
+    title('b0 motorized'); colorbar;
+    caxis([0 2]);
+    
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\motorized\results\1087\regression_results_reshaped_r2s.mat']); 
+    subplot(3, 3, 6); imagesc(r2s); axis square;
+    title('r2s motorized'); colorbar;
+    caxis([0 0.05]);
+    
+    % % plot differences
+    % load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\difference from spontaneous to motorized\1087\betas_difference.mat'); 
+    % subplot(4, 3, 7); imagesc(betas_difference(:,:,1)); axis square;
+    % title('b1 difference'); colorbar; colormap(gca, cmap_diffs); 
+    % caxis([-0.09 0.09]); 
+    % 
+    % subplot(4, 3, 8); imagesc(betas_difference(:,:,2)); axis square;
+    % title('b0 difference'); colorbar; colormap(gca, cmap_diffs);
+    % caxis([-0.5 0.5]);
+    
+    % results from motorized & spontaneous together.
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\motorized & spontaneous together\results\1087\regression_results_reshaped_betas.mat']); 
+    subplot(3, 3, 7); imagesc(betas(:,:,1)); axis square;
+    title('b1 motorized & spontaneous'); colorbar; colormap(gca, cmap_diffs);
+    caxis([-0.1 0.1]);
+    
+    subplot(3, 3, 8); imagesc(betas(:,:,2)); axis square;
+    title('b0 motorized & spontaneous'); colorbar;
+    caxis([0 2]);
+    
+    load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\' transformation '\motorized & spontaneous together\results\1087\regression_results_reshaped_r2s.mat']); 
+    subplot(3, 3, 9); imagesc(r2s); axis square;
+    title('r2s motorized & spontaneous'); colorbar;
+    caxis([0 0.05]);
+    
+    sgtitle([mouse ', ' transformation]);
 
-% plot spontaneous;
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_betas.mat'); 
-subplot(3, 3, 1); imagesc(betas(:,:,1)); axis square;
-title('b1 spontaneous'); colorbar; colormap(gca, cmap_diffs);
-caxis([-0.05 0.05]);
-
-subplot(3, 3, 2); imagesc(betas(:,:,2)); axis square;
-title('b0 spontaneous'); colorbar;
-caxis([0 1]);
-
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_r2s.mat'); 
-subplot(3, 3,3); imagesc(r2s); axis square;
-title('r2s spontaneous'); colorbar; 
-caxis([0 0.05]);
-
-% plot motorized
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_betas.mat'); 
-subplot(3, 3,4); imagesc(betas(:,:,1)); axis square;
-title('b1 motorized'); colorbar; colormap(gca, cmap_diffs);
-caxis([-0.05 0.05]);
-
-subplot(3, 3, 5); imagesc(betas(:,:,2)); axis square;
-title('b0 motorized'); colorbar;
-caxis([0 1]);
-
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_r2s.mat'); 
-subplot(3, 3, 6); imagesc(r2s); axis square;
-title('r2s motorized'); colorbar;
-caxis([0 0.05]);
-
-% % plot differences
-% load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\difference from spontaneous to motorized\1087\betas_difference.mat'); 
-% subplot(4, 3, 7); imagesc(betas_difference(:,:,1)); axis square;
-% title('b1 difference'); colorbar; colormap(gca, cmap_diffs); 
-% caxis([-0.09 0.09]); 
-% 
-% subplot(4, 3, 8); imagesc(betas_difference(:,:,2)); axis square;
-% title('b0 difference'); colorbar; colormap(gca, cmap_diffs);
-% caxis([-0.5 0.5]);
-
-% results from motorized & spontaneous together.
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized & spontaneous together\results\1087\regression_results_reshaped_betas.mat'); 
-subplot(3, 3, 7); imagesc(betas(:,:,1)); axis square;
-title('b1 motorized & spontaneous'); colorbar; colormap(gca, cmap_diffs);
-caxis([-0.05 0.05]);
-
-subplot(3, 3, 8); imagesc(betas(:,:,2)); axis square;
-title('b0 motorized & spontaneous'); colorbar;
-caxis([0 1]);
-
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized & spontaneous together\results\1087\regression_results_reshaped_r2s.mat'); 
-subplot(3, 3, 9); imagesc(r2s); axis square;
-title('r2s motorized & spontaneous'); colorbar;
-caxis([0 0.05]);
-
-sgtitle([mouse]);
+end 
 
 %% Try fitting exponential
 % [I don't think I feel comfortable *really* trying this or another shape 
 % until I get more mice analyzed to this point]
-number_of_sources = 29; 
+
 indices = find(tril(ones(number_of_sources), -1));
 
 x = velocity_vector; 
-y = all_correlations(indices(55),:)';
+y = all_correlations(indices(15),:)';
 g = fittype('a-b*exp(-c*x)');
 f0 = fit(x,y,g,'StartPoint',[[ones(size(x)), -exp(-x)]\y; 1]);
 
@@ -559,4 +583,4 @@ plot(velocity_vector, y, 'ok')
 plot(plotx, ploty_main, 'b');
 plot(plotx, ploty_low, 'r');
 plot(plotx, ploty_high, 'r');
-ylim([-1 1]);
+%ylim([-1 1]);
