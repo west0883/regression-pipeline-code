@@ -46,6 +46,8 @@ function [parameters] = RegressData(parameters)
 
     % Run regression.
     [b,~,~,~,stats] = regress(response, explanatory);
-    parameters.results.r2 = stats(1);
-    parameters.results.bs = b; 
+
+    % Put into output
+    parameters.results_r2 = stats(1);
+    parameters.results_betas = b; 
 end
