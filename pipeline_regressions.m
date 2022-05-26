@@ -99,10 +99,10 @@ parameters.loop_variables.result_types = {'betas'; 'r2s'};
 
 %% 
 
-distributions = NaN(size(correlations_reshaped,2), 36); % 36 is the  default number of bins 
- a = squeeze(correlations(1,10,:));
-[vels, places] = sort(average_velocity);
-a = a(places);
+% distributions = NaN(size(correlations_reshaped,2), 36); % 36 is the  default number of bins 
+%  a = squeeze(correlations(1,10,:));
+% [vels, places] = sort(average_velocity);
+% a = a(places);
 
 %% Regress all spontaneous
 period = 'walk';
