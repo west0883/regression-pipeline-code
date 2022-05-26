@@ -27,13 +27,14 @@ parameters.mice_all = mice_all;
 % ****Change here if there are specific mice, days, and/or stacks you want to work with**** 
 parameters.mice_all = parameters.mice_all(1);
 
-periods_spontaneous = {'rest';'walk';'startwalk';'prewalk';'stopwalk';'postwalk';'full_onset';'full_offset'};
-
 load([parameters.dir_exper 'periods_nametable.mat']);
-periods_motorized = periods.condition;
+periods_motorized = periods;
 
-% Create a shared motorized & spontaneous list.
-periods_bothConditions = [periods.condition; periods_spontaneous]; 
+load([parameters.dir_exper 'periods_nametable_spontaneous.mat']);
+periods_spontaneous = periods;
+
+% Create a shared motorized & spontaneous table.
+periods_bothConditions = [periods_motorized; periods_spontaneous]; 
 
 % Make list of transformation types for iterating later.
 transformations = {'not transformed'; 'Fisher transformed'};
