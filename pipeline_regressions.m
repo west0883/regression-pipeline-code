@@ -49,7 +49,7 @@ number_of_PCs = number_of_sources * (number_of_sources - 1)/2; % The maximum num
 indices = find(tril(ones(number_of_sources), -1));
 
 % Correlations vs scores 
-parameters.loop_variables.data_type = {'correlations', 'PCA scores individual mouse'};
+parameters.loop_variables.data_type = {'correlations', 'PCA individual mouse'};
 value_indices{1} = 1:((number_of_sources^2 - number_of_sources)/2);
 value_indices{2} = 1:number_of_PCs; 
 parameters.loop_variables.value_indices = value_indices;
@@ -208,7 +208,7 @@ periods = {'176'; '177'; '178'; '179'};
 if isfield(parameters, 'loop_list')
 parameters = rmfield(parameters,'loop_list');
 end
-parameters.loop_variables.data_type = {'PCA scores individual mouse'};
+parameters.loop_variables.data_type = {'PCA individual mouse'};
 % Iterations.
 parameters.loop_list.iterators = {
                'data_type', {'loop_variables.data_type'}, 'data_type_iterator';
@@ -227,7 +227,7 @@ parameters.loop_list.things_to_load.data.variable= {'values{', 'period', '}'};
 parameters.loop_list.things_to_load.data.level = 'mouse';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'fluorescence analysis\'], 'data_type', '\', 'transformation', '\', 'mouse', '\all concatenated\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'data_type', '\', 'transformation', '\motorized\walk values concatenated\', 'mouse', '\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'values_all_c_walk.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'values_all'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -256,7 +256,7 @@ parameters.predictorsDim = 2;
 
 % Input 
 % Correlations as response/ dependent variable.
-parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\'], 'data_type', '\','transformation', '\', 'mouse', '\all concatenated\'};
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'data_type', '\','transformation', '\motorized\walk values concatenated\', 'mouse', '\'};
 parameters.loop_list.things_to_load.response.filename= {'values_all_c_walk.mat'};
 parameters.loop_list.things_to_load.response.variable= {'values_all(', 'index', ',:)'}; 
 parameters.loop_list.things_to_load.response.level = 'mouse';
@@ -407,7 +407,7 @@ parameters.loop_list.things_to_load.data.variable= {'values{', 'period', '}'};
 parameters.loop_list.things_to_load.data.level = 'mouse';
 
 % Output
-parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'],  'data_type', '\', 'transformation', '\motorized & spontaneous together\values together\', 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'],  'data_type', '\', 'transformation', '\motorized & spontaneous together\walk values concatenated\', 'mouse','\'};
 parameters.loop_list.things_to_save.concatenated_data.filename= {'values_all_walk.mat'};
 parameters.loop_list.things_to_save.concatenated_data.variable= {'values_all_walk'}; 
 parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
@@ -437,7 +437,7 @@ parameters.predictorsDim = 2;
 
 % Input 
 % (correlations as response/dependent variable)
-parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'data_type', '\', 'transformation', '\motorized & spontaneous together\values together\', 'mouse','\'};
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'data_type', '\', 'transformation', '\motorized & spontaneous together\walk values concatenated\', 'mouse','\'};
 parameters.loop_list.things_to_load.response.filename= {'values_all_walk.mat'};
 parameters.loop_list.things_to_load.response.variable= {'values_all_walk(', 'index', ',:)'}; 
 parameters.loop_list.things_to_load.response.level = 'mouse';
