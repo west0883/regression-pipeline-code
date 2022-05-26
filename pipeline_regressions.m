@@ -125,7 +125,7 @@ parameters.loop_list.iterators = {
 parameters.predictorsDim = 1; 
 
 % Squeeze data first
-parameters.evaluation_instructions = {'data_evaluated = squeeze(parameters.response);'};
+parameters.evaluation_instructions = {{'data_evaluated = squeeze(parameters.response);'}};
 
 % Input 
 % Correlations as response/ dependent variable.
@@ -429,7 +429,7 @@ parameters.loop_list.iterators = {
               'index', {'loop_variables.value_indices{', 'data_type_iterator', '}'}, 'index_iterator'};
 
 % Squeeze data first
-parameters.evaluation_instructions = {'data_evaluated = squeeze(parameters.response);'};
+parameters.evaluation_instructions = {{'data_evaluated = squeeze(parameters.response);'}};
 
 % Dimension of different predictors (so you can orient variables correctly
 % before regressing)
