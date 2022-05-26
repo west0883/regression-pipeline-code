@@ -327,7 +327,152 @@ parameters.loop_list.things_to_save.data_subtracted.level = 'mouse';
 
 RunAnalysis({@SubtractData}, parameters);
 
-%% Plot the difference in betas 
+%% Concatenate all spontaneous & motorized velocities
+
+% Always clear loop list first. 
+if isfield(parameters, 'loop_list')
+parameters = rmfield(parameters,'loop_list');
+end
+
+parameters.loop_variables.mice_all = parameters.mice_all;
+parameters.loop_variables.conditions = {'motorized', 'spontaneous'};
+
+% Iterations.
+parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+              'condition', {'loop_variables.conditions(:)'}, 'condition_iterator'};
+
+parameters.concatDim = 1; 
+
+% Input
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\'], 'condition', '\velocity vectors\', 'mouse','\'};
+parameters.loop_list.things_to_load.data.filename= {'velocity_vector.mat'};
+parameters.loop_list.things_to_load.data.variable= {'velocity_vector'}; 
+parameters.loop_list.things_to_load.data.level = 'condition';
+
+% Output
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\velocity vectors\'], 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.filename= {'velocity_vector.mat'};
+parameters.loop_list.things_to_save.concatenated_data.variable= {'velocity_vector'}; 
+parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
+
+RunAnalysis({@ConcatenateData}, parameters);
+
+%% Concatenate all spontaneous & motorized corr together
+% (Use a trick with the way Concatenate data works to load in from 2
+% separate locations, works only when concatenating 2 things): load spontaneous in
+% as data (needs to be second to match with above), motorized as
+% concatenated_data.
+
+% Always clear loop list first. 
+if isfield(parameters, 'loop_list')
+parameters = rmfield(parameters,'loop_list');
+end
+
+parameters.loop_variables.mice_all = parameters.mice_all;
+
+% Iterations.
+parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'}; 
+
+parameters.concatDim = 2; 
+
+% Input
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\spontaneous\'] 'mouse', '\instances reshaped\'};
+parameters.loop_list.things_to_load.data.filename= {'correlations_walk.mat'};
+parameters.loop_list.things_to_load.data.variable= {'correlations_reshaped'}; 
+parameters.loop_list.things_to_load.data.level = 'mouse';
+
+parameters.loop_list.things_to_load.concatenated_data.dir = {[parameters.dir_exper 'fluorescence analysis\correlations\motorized\'] 'mouse', '\all concatenated\'};
+parameters.loop_list.things_to_load.concatenated_data.filename= {'correlations_all_c_walk.mat'};
+parameters.loop_list.things_to_load.concatenated_data.variable= {'correlations'}; 
+parameters.loop_list.things_to_load.concatenated_data.level = 'mouse';
+
+% Output
+parameters.loop_list.things_to_save.concatenated_data.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\correlations together\'], 'mouse','\'};
+parameters.loop_list.things_to_save.concatenated_data.filename= {'correlations.mat'};
+parameters.loop_list.things_to_save.concatenated_data.variable= {'all_correlations'}; 
+parameters.loop_list.things_to_save.concatenated_data.level = 'mouse';
+
+RunAnalysis({@ConcatenateData}, parameters);
+
+%% Regress spontaneous & motorized together.
+
+number_of_sources = 29; 
+indices = find(tril(ones(number_of_sources), -1));
+
+% Always clear loop list first. 
+if isfield(parameters, 'loop_list')
+parameters = rmfield(parameters,'loop_list');
+end
+
+% Iterations.
+parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
+              'index', {'loop_variables.indices'}, 'index_iterator'};
+
+parameters.loop_variables.mice_all = parameters.mice_all;
+parameters.loop_variables.indices = indices;
+
+% Dimension of different predictors (so you can orient variables correctly
+% before regressing)
+parameters.predictorsDim = 2; 
+
+% Input 
+% (correlations as response/dependent variable)
+parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\correlations together\'], 'mouse','\'};
+parameters.loop_list.things_to_load.response.filename= {'correlations.mat'};
+parameters.loop_list.things_to_load.response.variable= {'all_correlations(', 'index', ',:)'}; 
+parameters.loop_list.things_to_load.response.level = 'mouse';
+
+% (Velocities as explanatory/independent variable.)
+parameters.loop_list.things_to_load.explanatory.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized & spontaneous together\velocity vectors\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.explanatory.filename= {'velocity_vector.mat'};
+parameters.loop_list.things_to_load.explanatory.variable= {'velocity_vector'}; 
+parameters.loop_list.things_to_load.explanatory.level = 'mouse';
+
+% Output
+parameters.loop_list.things_to_save.results_r2.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_r2.filename= {'regression_results_r2s.mat'};
+parameters.loop_list.things_to_save.results_r2.variable= {'r2s(', 'index_iterator', ', 1)'}; 
+parameters.loop_list.things_to_save.results_r2.level = 'mouse';
+
+parameters.loop_list.things_to_save.results_betas.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.results_betas.filename= {'regression_results_betas.mat'};
+parameters.loop_list.things_to_save.results_betas.variable= {'betas(', 'index_iterator', ', :)'}; 
+parameters.loop_list.things_to_save.results_betas.level = 'mouse';
+
+RunAnalysis({@RegressData}, parameters);
+
+%% Reshape motorized & spontaneous regression results 
+number_of_sources = 29; 
+indices = find(tril(ones(number_of_sources), -1));
+
+parameters.loop_variables.result_types = {'betas'; 'r2s'};
+parameters.loop_variables.mice_all = parameters.mice_all;
+
+% Always clear loop list first. 
+if isfield(parameters, 'loop_list')
+parameters = rmfield(parameters,'loop_list');
+end
+
+% Iterators
+parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
+                                  'result_type', {'loop_variables.result_types(:)'}, 'result_type_iterator'};
+parameters.pixels = [number_of_sources, number_of_sources];
+parameters.indices_of_mask = indices;
+parameters.pixelDim = 2; 
+
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.data.filename= {'regression_results_', 'result_type', '.mat'};
+parameters.loop_list.things_to_load.data.variable= {'result_type'}; 
+parameters.loop_list.things_to_load.data.level = 'result_type';
+
+parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper '\regression analysis\walk velocity\motorized & spontaneous together\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.data_matrix_filled.filename= {'regression_results_reshaped_', 'result_type', '.mat'};
+parameters.loop_list.things_to_save.data_matrix_filled.variable= {'result_type'}; 
+parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
+
+RunAnalysis({@FillMasks_forRunAnalysis}, parameters);
+
+%% Plot regression results
 cmap_diffs = flipud(cbrewer('div', 'RdBu', 256, 'nearest'));
 mouse = '1087'; 
 
@@ -335,46 +480,83 @@ figure;
 
 % plot spontaneous;
 load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_betas.mat'); 
-subplot(3,3,1); imagesc(betas(:,:,1)); axis square;
-title('b1 spontaneous'); colorbar;
-caxis([-0.08 0.01]);
+subplot(3, 3, 1); imagesc(betas(:,:,1)); axis square;
+title('b1 spontaneous'); colorbar; colormap(gca, cmap_diffs);
+caxis([-0.05 0.05]);
 
-subplot(3,3,2); imagesc(betas(:,:,2)); axis square;
+subplot(3, 3, 2); imagesc(betas(:,:,2)); axis square;
 title('b0 spontaneous'); colorbar;
 caxis([0 1]);
 
 load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_r2s.mat'); 
-subplot(3,3,3); imagesc(r2s); axis square;
-title('r2s spontaneous'); colorbar;
-caxis([0 0.02]);
+subplot(3, 3,3); imagesc(r2s); axis square;
+title('r2s spontaneous'); colorbar; 
+caxis([0 0.05]);
 
 % plot motorized
 load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_betas.mat'); 
-subplot(3,3,4); imagesc(betas(:,:,1)); axis square;
-title('b1 motorized'); colorbar;
-caxis([-0.08 0.01]);
+subplot(3, 3,4); imagesc(betas(:,:,1)); axis square;
+title('b1 motorized'); colorbar; colormap(gca, cmap_diffs);
+caxis([-0.05 0.05]);
 
-subplot(3,3,5); imagesc(betas(:,:,2)); axis square;
+subplot(3, 3, 5); imagesc(betas(:,:,2)); axis square;
 title('b0 motorized'); colorbar;
 caxis([0 1]);
 
 load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_r2s.mat'); 
-subplot(3,3,6); imagesc(r2s); axis square;
+subplot(3, 3, 6); imagesc(r2s); axis square;
 title('r2s motorized'); colorbar;
-caxis([0 0.02]);
+caxis([0 0.05]);
 
-% plot differences
-load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\difference from spontaneous to motorized\1087\betas_difference.mat'); 
-subplot(3,3,7); imagesc(betas_difference(:,:,1)); axis square;
-title('b1 difference'); colorbar; colormap(gca, cmap_diffs); 
-caxis([-0.09 0.09]); 
+% % plot differences
+% load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\difference from spontaneous to motorized\1087\betas_difference.mat'); 
+% subplot(4, 3, 7); imagesc(betas_difference(:,:,1)); axis square;
+% title('b1 difference'); colorbar; colormap(gca, cmap_diffs); 
+% caxis([-0.09 0.09]); 
+% 
+% subplot(4, 3, 8); imagesc(betas_difference(:,:,2)); axis square;
+% title('b0 difference'); colorbar; colormap(gca, cmap_diffs);
+% caxis([-0.5 0.5]);
 
-subplot(3,3,8); imagesc(betas_difference(:,:,2)); axis square;
-title('b0 difference'); colorbar; colormap(gca, cmap_diffs);
-caxis([-0.5 0.5]);
+% results from motorized & spontaneous together.
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized & spontaneous together\results\1087\regression_results_reshaped_betas.mat'); 
+subplot(3, 3, 7); imagesc(betas(:,:,1)); axis square;
+title('b1 motorized & spontaneous'); colorbar; colormap(gca, cmap_diffs);
+caxis([-0.05 0.05]);
 
-sgtitle([mouse ', diff spontaneous to motorized']);
+subplot(3, 3, 8); imagesc(betas(:,:,2)); axis square;
+title('b0 motorized & spontaneous'); colorbar;
+caxis([0 1]);
 
-%% Concatenate all spontaneous & motorized velocities together
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized & spontaneous together\results\1087\regression_results_reshaped_r2s.mat'); 
+subplot(3, 3, 9); imagesc(r2s); axis square;
+title('r2s motorized & spontaneous'); colorbar;
+caxis([0 0.05]);
 
-%% Concatenate all spontaneous & motorized corr together
+sgtitle([mouse]);
+
+%% Try fitting exponential
+% [I don't think I feel comfortable *really* trying this or another shape 
+% until I get more mice analyzed to this point]
+number_of_sources = 29; 
+indices = find(tril(ones(number_of_sources), -1));
+
+x = velocity_vector; 
+y = all_correlations(indices(55),:)';
+g = fittype('a-b*exp(-c*x)');
+f0 = fit(x,y,g,'StartPoint',[[ones(size(x)), -exp(-x)]\y; 1]);
+
+plotx = [0 : 0.1: 18];
+ploty_main = f0.a -  f0.b * exp(-f0.c * plotx); 
+
+intervals =  confint(f0);
+
+ploty_low = intervals(1,1) -  intervals(1,2) * exp(- intervals(1,3) *plotx); 
+ploty_high = intervals(2,1) -  intervals(2,2) * exp(- intervals(2,3) *plotx); 
+
+figure; hold on;
+plot(velocity_vector, y, 'ok')
+plot(plotx, ploty_main, 'b');
+plot(plotx, ploty_low, 'r');
+plot(plotx, ploty_high, 'r');
+ylim([-1 1]);
