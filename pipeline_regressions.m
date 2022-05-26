@@ -252,13 +252,13 @@ parameters.loop_list.things_to_save.results_betas.level = 'mouse';
 
 RunAnalysis({@RegressData}, parameters);
 
-%% Compare differences in betas between conditions
+%% Reshape regression results 
+% (you end up using them all in reshaped form later anyway)
 number_of_sources = 29; 
 indices = find(tril(ones(number_of_sources), -1));
 
 parameters.loop_variables.conditions = {'motorized'; 'spontaneous'};
-parameters.loop_variables.betas = {'b1'; 'b0'};
-parameters.loop_variables.indices = indices;
+parameters.loop_variables.result_types = {'betas'; 'r2s'};
 parameters.loop_variables.mice_all = parameters.mice_all;
 
 % Always clear loop list first. 
@@ -268,6 +268,113 @@ end
 
 % Iterators
 parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator';
-               'condition', {'loop_variables.conditions{:}'}, 'condition_iterator'};
+                                  'condition', {'loop_variables.conditions(:)'}, 'condition_iterator';
+                                  'result_type', {'loop_variables.result_types(:)'}, 'result_type_iterator'};
+parameters.pixels = [number_of_sources, number_of_sources];
+parameters.indices_of_mask = indices;
+parameters.pixelDim = 2; 
 
-% Load, subtract, reshape, save
+parameters.loop_list.things_to_load.data.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'condition', '\results\', 'mouse', '\'};
+parameters.loop_list.things_to_load.data.filename= {'regression_results_', 'result_type', '.mat'};
+parameters.loop_list.things_to_load.data.variable= {'result_type'}; 
+parameters.loop_list.things_to_load.data.level = 'result_type';
+
+parameters.loop_list.things_to_save.data_matrix_filled.dir = {[parameters.dir_exper '\regression analysis\walk velocity\'], 'condition', '\results\', 'mouse', '\'};
+parameters.loop_list.things_to_save.data_matrix_filled.filename= {'regression_results_reshaped_', 'result_type', '.mat'};
+parameters.loop_list.things_to_save.data_matrix_filled.variable= {'result_type'}; 
+parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
+
+RunAnalysis({@FillMasks_forRunAnalysis}, parameters);
+
+%% Compare differences in betas between conditions
+% Load, subtract, save
+number_of_sources = 29; 
+indices = find(tril(ones(number_of_sources), -1));
+
+parameters.loop_variables.conditions = {'motorized'; 'spontaneous'};
+parameters.loop_variables.mice_all = parameters.mice_all;
+
+% Always clear loop list first. 
+if isfield(parameters, 'loop_list')
+parameters = rmfield(parameters,'loop_list');
+end
+
+% Iterators
+parameters.loop_list.iterators = {'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'};
+                                  
+parameters.pixels = [number_of_sources, number_of_sources];
+parameters.indices_of_mask = indices;
+
+% Motorized
+parameters.loop_list.things_to_load.subtract_this.dir = {[parameters.dir_exper '\regression analysis\walk velocity\spontaneous\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.subtract_this.filename= {'regression_results_reshaped_betas.mat'};
+parameters.loop_list.things_to_load.subtract_this.variable= {'betas'}; 
+parameters.loop_list.things_to_load.subtract_this.level = 'mouse';
+
+% Spontaneous 
+parameters.loop_list.things_to_load.subtract_from_this.dir = {[parameters.dir_exper 'regression analysis\walk velocity\motorized\results\'], 'mouse', '\'};
+parameters.loop_list.things_to_load.subtract_from_this.filename= {'regression_results_reshaped_betas.mat'};
+parameters.loop_list.things_to_load.subtract_from_this.variable= {'betas'}; 
+parameters.loop_list.things_to_load.subtract_from_this.level = 'mouse';
+
+% Output
+parameters.loop_list.things_to_save.data_subtracted.dir = {[parameters.dir_exper '\regression analysis\walk velocity\difference from spontaneous to motorized\'], 'mouse', '\'};
+parameters.loop_list.things_to_save.data_subtracted.filename= {'betas_difference.mat'};
+parameters.loop_list.things_to_save.data_subtracted.variable= {'betas_difference'}; 
+parameters.loop_list.things_to_save.data_subtracted.level = 'mouse';
+
+%parameters.loop_list.things_to_rename = {{'data_subtracted', 'data'}};
+
+RunAnalysis({@SubtractData}, parameters);
+
+%% Plot the difference in betas 
+cmap_diffs = flipud(cbrewer('div', 'RdBu', 256, 'nearest'));
+mouse = '1087'; 
+
+figure; 
+
+% plot spontaneous;
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_betas.mat'); 
+subplot(3,3,1); imagesc(betas(:,:,1)); axis square;
+title('b1 spontaneous'); colorbar;
+caxis([-0.08 0.01]);
+
+subplot(3,3,2); imagesc(betas(:,:,2)); axis square;
+title('b0 spontaneous'); colorbar;
+caxis([0 1]);
+
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\spontaneous\results\1087\regression_results_reshaped_r2s.mat'); 
+subplot(3,3,3); imagesc(r2s); axis square;
+title('r2s spontaneous'); colorbar;
+caxis([0 0.02]);
+
+% plot motorized
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_betas.mat'); 
+subplot(3,3,4); imagesc(betas(:,:,1)); axis square;
+title('b1 motorized'); colorbar;
+caxis([-0.08 0.01]);
+
+subplot(3,3,5); imagesc(betas(:,:,2)); axis square;
+title('b0 motorized'); colorbar;
+caxis([0 1]);
+
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\motorized\results\1087\regression_results_reshaped_r2s.mat'); 
+subplot(3,3,6); imagesc(r2s); axis square;
+title('r2s motorized'); colorbar;
+caxis([0 0.02]);
+
+% plot differences
+load('Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\difference from spontaneous to motorized\1087\betas_difference.mat'); 
+subplot(3,3,7); imagesc(betas_difference(:,:,1)); axis square;
+title('b1 difference'); colorbar; colormap(gca, cmap_diffs); 
+caxis([-0.09 0.09]); 
+
+subplot(3,3,8); imagesc(betas_difference(:,:,2)); axis square;
+title('b0 difference'); colorbar; colormap(gca, cmap_diffs);
+caxis([-0.5 0.5]);
+
+sgtitle([mouse ', diff spontaneous to motorized']);
+
+%% Concatenate all spontaneous & motorized velocities together
+
+%% Concatenate all spontaneous & motorized corr together
