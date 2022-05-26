@@ -207,7 +207,7 @@ periods = {'176'; '177'; '178'; '179'};
 if isfield(parameters, 'loop_list')
 parameters = rmfield(parameters,'loop_list');
 end
-
+parameters.loop_variables.data_type = {'PCA scores individual mouse'};
 % Iterations.
 parameters.loop_list.iterators = {
                'data_type', {'loop_variables.data_type'}, 'data_type_iterator';
@@ -249,10 +249,6 @@ parameters.loop_list.iterators = {
               'mouse', {'loop_variables.mice_all(:).name'}, 'mouse_iterator'; 
               'index', {'loop_variables.value_indices{', 'data_type_iterator', '}'}, 'index_iterator'};
 
-
-% Squeeze data first
-parameters.evaluation_instructions = {'data_evaluated = squeeze(parameters.response);'};
-
 % Dimension of different predictors (so you can orient variables correctly
 % before regressing)
 parameters.predictorsDim = 2; 
@@ -281,9 +277,7 @@ parameters.loop_list.things_to_save.results_betas.filename= {'regression_results
 parameters.loop_list.things_to_save.results_betas.variable= {'betas(', 'index_iterator', ', :)'}; 
 parameters.loop_list.things_to_save.results_betas.level = 'mouse';
 
-parameters.loop_list.things_to_rename = {{'data_evaluated', 'response'}};
-
-RunAnalysis({@EvaluateOnData, @RegressData}, parameters);
+RunAnalysis({@RegressData}, parameters);
 
 %% Reshape regression results (Correlations only)
 % (you end up using them all in reshaped form later anyway)
@@ -494,7 +488,7 @@ parameters.loop_list.things_to_save.data_matrix_filled.level = 'result_type';
 
 RunAnalysis({@FillMasks_forRunAnalysis}, parameters);
 
-%% Plot regression results
+%% Plot correlation regression results
 cmap_diffs = flipud(cbrewer('div', 'RdBu', 256, 'nearest'));
 mouse = '1087'; 
 
@@ -559,6 +553,32 @@ for i = 1:numel(transformations)
     
     sgtitle([mouse ', ' transformation]);
 
+end 
+
+%% Plot results of PC score regressions
+
+mouse = '1087'; 
+conditions = {'spontaneous', 'motorized', 'motorized & spontaneous together'};
+for i = 1:numel(transformations)
+    transformation = transformations{i};
+    
+    figure; 
+    for condi = 1:numel(conditions)
+        condition = conditions{condi};
+        load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\PCA scores individual mouse\' transformation '\' condition '\results\' mouse '\regression_results_betas.mat'])
+        load(['Y:\Sarah\Analysis\Experiments\Random Motorized Treadmill\regression analysis\walk velocity\PCA scores individual mouse\' transformation '\' condition '\results\' mouse '\regression_results_r2s.mat'])    
+        subplot(2,3,condi); 
+        imagesc(betas(1:20, :) ); colorbar; caxis([-1 1])
+        xticks([1:2]); 
+        xticklabels({'b', 'intercept'});
+        title(condition);
+
+        subplot(2,3,condi + 3); 
+        imagesc(r2s(1:20)); colorbar; caxis([0  0.05])
+        xlabel('r2');
+    
+    end
+    sgtitle([mouse ', ' transformation]);
 end 
 
 %% Try fitting exponential
