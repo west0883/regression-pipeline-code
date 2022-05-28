@@ -25,19 +25,17 @@ load([parameters.dir_exper '\mice_all.mat']);
 parameters.mice_all = mice_all;
 
 % ****Change here if there are specific mice, days, and/or stacks you want to work with**** 
-parameters.mice_all = parameters.mice_all(1);
+parameters.mice_all = parameters.mice_all;
 
 load([parameters.dir_exper 'periods_nametable.mat']);
 periods_motorized = periods;
 
 load([parameters.dir_exper 'periods_nametable_spontaneous.mat']);
 periods_spontaneous = periods;
+clear periods;
 
 % Create a shared motorized & spontaneous table.
 periods_bothConditions = [periods_motorized; periods_spontaneous]; 
-
-% Make list of transformation types for iterating later.
-transformations = {'not transformed'; 'Fisher transformed'};
 
 % Number of sources (spatial sources across mice)
 number_of_sources = 32; 
@@ -57,7 +55,7 @@ parameters.loop_variables.value_indices = value_indices;
 % Loop variables.
 parameters.loop_variables.mice_all = parameters.mice_all;
 parameters.loop_variables.indices = indices;
-parameters.loop_variables.transformations = transformations;
+parameters.loop_variables.transformations = {'Fisher transformed'}; % 'not transformed'
 parameters.loop_variables.conditions = {'motorized'; 'spontaneous'};
 parameters.loop_variables.result_types = {'betas'; 'r2s'};
 
@@ -104,7 +102,7 @@ parameters.loop_variables.result_types = {'betas'; 'r2s'};
 % [vels, places] = sort(average_velocity);
 % a = a(places);
 
-%% Regress all spontaneous
+%% Regress all spontaneous (per individual mouse)
 period = 'walk';
 period_index = '190';
 
@@ -128,7 +126,7 @@ parameters.predictorsDim = 1;
 parameters.evaluation_instructions = {{'data_evaluated = squeeze(parameters.response);'}};
 
 % Input 
-% Correlations as response/ dependent variable.
+% Correlations or PC scores as response/ dependent variable.
 parameters.loop_list.things_to_load.response.dir = {[parameters.dir_exper 'fluorescence analysis\'], 'data_type', '\', 'transformation', '\', 'mouse', '\instances reshaped\'};
 parameters.loop_list.things_to_load.response.filename= {'values.mat'};
 parameters.loop_list.things_to_load.response.variable= {['values{' period_index '}('], 'index_iterator' ,', 1,:)'}; 
